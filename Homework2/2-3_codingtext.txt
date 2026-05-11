@@ -1,0 +1,20 @@
+#include <string>
+#include <vector>
+#include <math.h>
+
+using namespace std;
+
+int solution(vector<vector<int>> dots) {
+    int answer = 0;
+    vector<int> pos = dots[0];
+    vector<int> tmp;
+    for(int i = 1; i < 4; i++)
+    {
+        tmp = dots[i];
+        if((pos[0] != tmp[0]) && (pos[1] != tmp[1]))
+            break;
+    }
+    answer = abs(pos[0]-tmp[0]) * abs(pos[1]-tmp[1]);
+    
+    return answer;
+}

@@ -8,6 +8,7 @@
 #include "afxdialogex.h"
 #include "math.h"
 #include <mutex>
+#include <condition_variable>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -27,6 +28,7 @@ inline void debugPrint(CString str)
 #endif
 
 mutex g_mutex; // 전역 뮤텍스 객체 선언
+condition_variable g_condVar; // 전역 조건 변수 객체 선언
 
 // 응용 프로그램 정보에 사용되는 CAboutDlg 대화 상자입니다.
 
@@ -412,18 +414,14 @@ void CDrawCircleDlg::OnDestroy()
 {
 	CDialogEx::OnDestroy();
 	// TODO: 여기에 메시지 처리기 코드를 추가합니다.
-	m_bRunThread = false; // 스레드 실행 상태를 false로 설정하여 스레드가 종료되도록 합니다.
-	Sleep(1000); // 스레드가 종료될 때까지 충분한 시간을 기다립니다.
+	unique_lock<mutex> lock(g_mutex); // 뮤텍스를 잠급니다.
+	g_condVar.wait_until(lock, chrono::steady_clock::now() + chrono::seconds(5), [this]() { return m_bRunThread == false; }); // 스레드가 종료될 때까지 대기합니다.
 }
 void CDrawCircleDlg::drawRandomCircleInThread(int nCount)
 {
 	lock_guard<mutex> lock(g_mutex);
-
 	for (int n = 0; n < nCount; n++)
 	{
-		if (m_bRunThread == false)
-			break;
-
 		CPoint* pPoints = getPoints();
 		for (int i = 0; i < 3; i++)
 		{
@@ -435,4 +433,6 @@ void CDrawCircleDlg::drawRandomCircleInThread(int nCount)
 		setPointerCount(3);
 		Sleep(500);
 	}
+	m_bRunThread = false; // 스레드 실행 상태를 false로 설정하여 스레드가 종료되도록 합니다.
+	g_condVar.notify_all(); // 조건 변수를 사용하여 스레드가 종료되었음을 알립니다.
 }
